@@ -34,60 +34,94 @@ func boardSum(board *[]boardType, index int) int {
 	return sum
 }
 
-func checkBingo(board *[]boardType, number int) int {
+func markNumber(board *[]boardType, number int, keyPositions *[]int) {
 	for ind, eachBoard := range *board {
-		bingoRow, bingoCol := true, true
 		for k, v := range *eachBoard {
 			if v.value != number || v.crossed {
 				continue
 			}
 			v.crossed = true
+			(*keyPositions)[ind] = k
+			break
+		}
+	}
+}
 
-			//check for bingo
+func checkBingo(board *[]boardType, keyPositions *[]int, bingoBoards *map[int]bool, part1 bool) (int, int) {
+	sm, id := -1, -1
+	for ind, eachBoard := range *board {
+		if (*bingoBoards)[ind] {
+			continue
+		}
+		bingoRow, bingoCol := true, true
+		k := (*keyPositions)[ind]
+		//check for bingo
 
-			// rows
-			r := k / 5
-			for i := 0; i < 5; i++ {
-				if (*eachBoard)[5*r+i].crossed {
-					continue
-				}
-				bingoRow = false
-				break
+		// rows
+		r := k / 5
+		for i := 0; i < 5; i++ {
+			if (*eachBoard)[5*r+i].crossed {
+				continue
 			}
+			bingoRow = false
+			break
+		}
 
-			if bingoRow {
-				sum := boardSum(board, ind)
-				return sum * number
+		if bingoRow {
+			sm = boardSum(board, ind)
+			(*bingoBoards)[ind] = true
+			id = ind
+			if part1 {
+				return sm, id
 			}
+		}
 
-			// cols
-			c := k % 5
-			for i := 0; i < 5; i++ {
-				if (*eachBoard)[i*5+c].crossed {
-					continue
-				}
-				bingoCol = false
-				break
+		// cols
+		c := k % 5
+		for i := 0; i < 5; i++ {
+			if (*eachBoard)[i*5+c].crossed {
+				continue
 			}
+			bingoCol = false
+			break
+		}
 
-			if bingoCol {
-				sum := boardSum(board, ind)
-				return sum * number
+		if bingoCol {
+			sm = boardSum(board, ind)
+			(*bingoBoards)[ind] = true
+			id = ind
+			if part1 {
+				return sm, id
 			}
 		}
 	}
+	return sm, id
+}
 
+func part1(numbersArray *[]int, board *[]boardType, keyPositions *[]int, bingoBoards *map[int]bool) int {
+	for _, numb := range *numbersArray {
+		markNumber(board, numb, keyPositions)
+		ans, _ := checkBingo(board, keyPositions, bingoBoards, true)
+		if ans != -1 {
+			return ans * numb
+		}
+	}
 	return -1
 }
 
-func part1(numbersArray *[]int, board *[]boardType) int {
+func part2(numbersArray *[]int, board *[]boardType, keyPositions *[]int, bingoBoards *map[int]bool) int {
+	sol := -1
 	for _, numb := range *numbersArray {
-		ans := checkBingo(board, numb)
-		if ans != -1 {
-			return ans
+		markNumber(board, numb, keyPositions)
+		ans, boardId := checkBingo(board, keyPositions, bingoBoards, false)
+		if ans != -1 && boardId != -1 {
+			if ans != 0 {
+				sol = ans * numb
+			}
+
 		}
 	}
-	return -1
+	return sol
 }
 
 func main() {
@@ -144,5 +178,22 @@ func main() {
 		}
 		board = append(board, &ele)
 	}
-	fmt.Println("part1 ans: ", part1(numbersArray, &board))
+
+	noOfBoards := len(board)
+
+	if noOfBoards == 0 {
+		log.Fatal("no of Boards is zero")
+	}
+
+	keyPositions := make([]int, noOfBoards)
+
+	bingoBoards := make(map[int]bool, 0)
+
+	for boardIndex := 0; boardIndex < noOfBoards; boardIndex++ {
+		bingoBoards[boardIndex] = false
+	}
+
+	fmt.Println("part1 ans: ", part1(numbersArray, &board, &keyPositions, &bingoBoards))
+	refershBoard(&board)
+	fmt.Println("part2 ans: ", part2(numbersArray, &board, &keyPositions, &bingoBoards))
 }
